@@ -180,14 +180,16 @@ const jobResolver = {
 
             // Initialize an array to store query parameters
             const queryParams = [];
+            let paramIndex = 1;
 
             // Initialize the query string
             let query = 'SELECT * FROM Job WHERE live = true';
 
             // Filter by location
             if (filter.location) {
-                query += ` AND location = '${filter.location}'`;
+                query += ` AND location = $${paramIndex}`;
                 queryParams.push(filter.location);
+                paramIndex++;
             }
 
             // Filter by job type (dynamically build the condition based on the specified job types)
@@ -197,31 +199,36 @@ const jobResolver = {
                 const formattedType = type.replace('_', ' ');
                 return formattedType;
                 })
-            if (jobTypeConditions) {
+            if (jobTypeConditions && jobTypeConditions.length > 0) {
                 let jobTypeCondition = '';
                 jobTypeCondition += ` AND (`;
                 for (let i = 0; i < jobTypeConditions.length; i++) {
-                    jobTypeCondition += `job_type = '${jobTypeConditions[i]}'`;
-                    jobTypeCondition += ' OR '
+                    jobTypeCondition += `job_type = $${paramIndex}`;
+                    queryParams.push(jobTypeConditions[i]);
+                    paramIndex++;
+                    if (i < jobTypeConditions.length - 1) {
+                        jobTypeCondition += ' OR ';
+                    }
                 }
-                jobTypeCondition = jobTypeCondition.slice(0, -4);
                 jobTypeCondition += `)`;
-                if (jobTypeCondition.length > 7) {
-                    query += jobTypeCondition;
-                }
+                query += jobTypeCondition;
             }
 
             // Filter by applicant year
             if (filter.applicant_year.length > 0) {
                 for (let i = 0; i < filter.applicant_year.length; i++) {
-                    query += ` AND ${filter.applicant_year[i]} = ANY(applicant_year)`;
+                    query += ` AND $${paramIndex} = ANY(applicant_year)`;
+                    queryParams.push(filter.applicant_year[i]);
+                    paramIndex++;
                 }
             }
 
             // Filter by tags
             if (filter.tags.length > 0) {
                 for (let i = 0; i < filter.tags.length; i++) {
-                    query += ` AND '${filter.tags[i]}' = ANY(tags)`;
+                    query += ` AND $${paramIndex} = ANY(tags)`;
+                    queryParams.push(filter.tags[i]);
+                    paramIndex++;
                 }
             }
 
@@ -234,7 +241,7 @@ const jobResolver = {
 
             console.log(query)
             // Execute the query
-            const result = await client.query(query);
+            const result = await client.query(query, queryParams);
             return result.rows;
         },
         viewArchivedJobs: async (_: any, { limit = 50, offset = 0 }: any, { dataSources }: any) => {
