@@ -1,5 +1,28 @@
 import { establishConnection } from '../utils';
 
+// Helper function to verify if the user is an authenticated admin
+const verifyAdminAuth = async (context: any): Promise<boolean> => {
+    // Check if user is authenticated
+    if (!context.user || !context.user.email) {
+        return false;
+    }
+
+    // Verify the user has admin privileges
+    const { db } = context.dataSources;
+    const client = await establishConnection(db);
+    
+    try {
+        const query = `SELECT admin_id FROM Admin WHERE email = $1`;
+        const resp = await client.query(query, [context.user.email]);
+        client.release();
+        return resp.rows.length > 0;
+    } catch (err) {
+        console.error('Admin verification error:', err);
+        client.release();
+        return false;
+    }
+};
+
 const adminResolver = {
     // Create types for the resolvers
     Query: {
@@ -72,7 +95,14 @@ const adminResolver = {
     },
 
     Mutation: {
-        createAdmin: async (_: any, { email, password }: any, { dataSources }: any) => {
+        createAdmin: async (_: any, { email, password }: any, context: any) => {
+            // Verify admin authorization
+            const isAdmin = await verifyAdminAuth(context);
+            if (!isAdmin) {
+                throw new Error('Unauthorized: Admin privileges required');
+            }
+
+            const { dataSources } = context;
             const { db } = dataSources;
             const client = await establishConnection(db);
 
@@ -93,7 +123,14 @@ const adminResolver = {
             }
         },
         // This resolver may need to be updated based on the frontend UX
-        updateAdmin: async (_: any, { id, email }: any, { dataSources }: any) => {
+        updateAdmin: async (_: any, { id, email }: any, context: any) => {
+            // Verify admin authorization
+            const isAdmin = await verifyAdminAuth(context);
+            if (!isAdmin) {
+                throw new Error('Unauthorized: Admin privileges required');
+            }
+
+            const { dataSources } = context;
             const { db } = dataSources;
             const client = await establishConnection(db);
 
@@ -107,7 +144,14 @@ const adminResolver = {
             client.release()
             return true;
         },
-        removeAdmin: async (_: any, { id }: any, { dataSources }: any) => {
+        removeAdmin: async (_: any, { id }: any, context: any) => {
+            // Verify admin authorization
+            const isAdmin = await verifyAdminAuth(context);
+            if (!isAdmin) {
+                throw new Error('Unauthorized: Admin privileges required');
+            }
+
+            const { dataSources } = context;
             const { db } = dataSources;
             const client = await establishConnection(db);
             const query = `DELETE FROM admin WHERE admin_id = $1;`;
@@ -119,11 +163,17 @@ const adminResolver = {
             client.release()
             return true;
         },
-        addAllowedAdmin: async (_: any, { id, email }: any, { dataSources }: any) => {
+        addAllowedAdmin: async (_: any, { id, email }: any, context: any) => {
+            // Verify admin authorization
+            const isAdmin = await verifyAdminAuth(context);
+            if (!isAdmin) {
+                throw new Error('Unauthorized: Admin privileges required');
+            }
+
+            const { dataSources } = context;
             const { db } = dataSources;
             const client = await establishConnection(db);
             
-            // @todo: Use session to check if the admin is allowed to add an admin
             const query = `INSERT INTO AllowedAdmins(email) VALUES ($1);`;
             await client.query(query, [email]).catch((err: any) => {
                 console.error(err);

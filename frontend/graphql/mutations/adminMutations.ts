@@ -4,24 +4,24 @@ import { gql } from '@apollo/client'
 
 export const CREATE_ADMIN = gql`
     mutation CreateAdmin($name: String!, $email: String!) {
-        createAdmin(name: $name, email: $email)
+        createAdmin(name: $name, email: $email) @requiresAuth @requiresRole(role: "admin")
     }
 `
 
 export const UPDATE_ADMIN = gql`
     mutation UpdateAdmin($adminId: ID!, $email: String!) {
-        updateAdmin(admin_id: $adminId, email: $email)
+        updateAdmin(admin_id: $adminId, email: $email) @requiresAuth @requiresRole(role: "admin")
     }
 `
 
 export const REMOVE_ADMIN = gql`
     mutation RemoveAdmin($adminId: ID!) {
-        removeAdmin(admin_id: $adminId)
+        removeAdmin(admin_id: $adminId) @requiresAuth @requiresRole(role: "admin")
     }
 `
 
 export const ADD_ALLOWED_ADMIN = gql`
     mutation Mutation($adminId: ID!, $email: String!) {
-        addAllowedAdmin(admin_id: $adminId, email: $email)
+        addAllowedAdmin(admin_id: $adminId, email: $email) @requiresAuth @requiresRole(role: "admin")
     }
 `
